@@ -6,10 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 public class Btree<E extends Comparable<E>> {
 
@@ -33,23 +31,17 @@ public class Btree<E extends Comparable<E>> {
         BNode<E> pnew;
         mediana = push(this.root, cl);
         if (up) {
-            pnew = new BNode<>(this.orden);
+            pnew = new BNode<E>(this.orden);
             pnew.count = 1;
             pnew.keys.set(0, mediana);
             pnew.childs.set(0, this.root);
-            if (nDes != null) {
-                nDes.setParent(pnew);
-                pnew.childs.set(1, nDes);
-            }
-            if (this.root != null) {
-                this.root.setParent(pnew);
-            }
+            pnew.childs.set(1, nDes);
             this.root = pnew;
         }
     }
 
     private E push(BNode<E> current, E cl) {
-        int[] pos = new int[1];
+        int pos[] = new int[1];
         E mediana;
         if (current == null) {
             up = true;
@@ -77,45 +69,41 @@ public class Btree<E extends Comparable<E>> {
     }
 
     private void putNode(BNode<E> current, E cl, BNode<E> rd, int k) {
-        for (int i = current.count - 1; i >= k; i--) {
+        int i;
+        for (i = current.count - 1; i >= k; i--) {
             current.keys.set(i + 1, current.keys.get(i));
             current.childs.set(i + 2, current.childs.get(i + 1));
         }
         current.keys.set(k, cl);
         current.childs.set(k + 1, rd);
         current.count++;
-        if (rd != null) {
-            rd.setParent(current);
-        }
     }
 
     private E dividedNode(BNode<E> current, E cl, int k) {
         BNode<E> rd = nDes;
-        int posMdna = current.count / 2;
+        int i, posMdna;
+        if (k <= this.orden / 2) {
+            posMdna = this.orden / 2;
+        } else {
+            posMdna = this.orden / 2 + 1;
+        }
         nDes = new BNode<>(this.orden);
-
-        for (int i = posMdna + 1; i < current.count; i++) {
-            nDes.keys.set(i - (posMdna + 1), current.keys.get(i));
-            nDes.childs.set(i - (posMdna + 1), current.childs.get(i));
-            if (current.childs.get(i) != null) {
-                current.childs.get(i).setParent(nDes);
-            }
+        for (i = posMdna; i < this.orden - 1; i++) {
+            nDes.keys.set(i - posMdna, current.keys.get(i));
+            nDes.childs.set(i - posMdna + 1, current.childs.get(i + 1));
         }
-
-        nDes.childs.set(0, current.childs.get(posMdna + 1));
-        if (current.childs.get(posMdna + 1) != null) {
-            current.childs.get(posMdna + 1).setParent(nDes);
-        }
-
-        nDes.count = current.count - (posMdna + 1);
+        nDes.count = (this.orden - 1) - posMdna;
         current.count = posMdna;
-        if (k <= posMdna) {
+        if (k <= this.orden / 2) {
             putNode(current, cl, rd, k);
         } else {
-            putNode(nDes, cl, rd, k - (posMdna + 1));
+            putNode(nDes, cl, rd, k - posMdna);
         }
-        E median = current.keys.get(posMdna);
+        E median = current.keys.get(current.count - 1);
+        nDes.childs.set(0, current.childs.get(current.count));
+        current.count--;
         return median;
+
     }
 
     @Override
@@ -226,7 +214,7 @@ public class Btree<E extends Comparable<E>> {
             boolean isLastChild = (pos[0] == node.count);
 
             if (node.childs.get(pos[0]).count < orden / 2) {
-                llenar(node, pos[0]);
+                fill(node, pos[0]);
             }
 
             if (isLastChild && pos[0] > node.count) {
@@ -277,11 +265,11 @@ public class Btree<E extends Comparable<E>> {
         return current.keys.get(0);
     }
 
-    private void llenar(BNode<E> node, int idx) {
+    private void fill(BNode<E> node, int idx) {
         if (idx != 0 && node.childs.get(idx - 1).count >= orden / 2) {
-            borrowFromPrev(node, idx);
+            borrowFromLeft(node, idx);
         } else if (idx != node.count && node.childs.get(idx + 1).count >= orden / 2) {
-            borrowFromNext(node, idx);
+            borrowFromRight(node, idx);
         } else {
             if (idx != node.count) {
                 merge(node, idx);
@@ -291,10 +279,9 @@ public class Btree<E extends Comparable<E>> {
         }
     }
 
-    private void borrowFromPrev(BNode<E> node, int idx) {
+    private void borrowFromLeft(BNode<E> node, int idx) {
         BNode<E> child = node.childs.get(idx);
         BNode<E> sibling = node.childs.get(idx - 1);
-
         for (int i = child.count - 1; i >= 0; i--) {
             child.keys.set(i + 1, child.keys.get(i));
         }
@@ -304,40 +291,34 @@ public class Btree<E extends Comparable<E>> {
                 child.childs.set(i + 1, child.childs.get(i));
             }
         }
-
         child.keys.set(0, node.keys.get(idx - 1));
 
         if (child.childs.get(0) != null) {
             child.childs.set(0, sibling.childs.get(sibling.count));
         }
-
         node.keys.set(idx - 1, sibling.keys.get(sibling.count - 1));
         child.count++;
         sibling.count--;
     }
 
-    private void borrowFromNext(BNode<E> node, int idx) {
+    private void borrowFromRight(BNode<E> node, int idx) {
         BNode<E> child = node.childs.get(idx);
         BNode<E> sibling = node.childs.get(idx + 1);
-
         child.keys.set(child.count, node.keys.get(idx));
 
         if (child.childs.get(0) != null) {
             child.childs.set(child.count + 1, sibling.childs.get(0));
         }
-
         node.keys.set(idx, sibling.keys.get(0));
 
         for (int i = 1; i < sibling.count; i++) {
             sibling.keys.set(i - 1, sibling.keys.get(i));
         }
-
         if (sibling.childs.get(0) != null) {
             for (int i = 1; i <= sibling.count; i++) {
                 sibling.childs.set(i - 1, sibling.childs.get(i));
             }
         }
-
         child.count++;
         sibling.count--;
     }
@@ -347,30 +328,25 @@ public class Btree<E extends Comparable<E>> {
         BNode<E> sibling = node.childs.get(idx + 1);
 
         child.keys.set(orden / 2 - 1, node.keys.get(idx));
-
         for (int i = 0; i < sibling.count; i++) {
             child.keys.set(i + orden / 2, sibling.keys.get(i));
         }
-
         if (child.childs.get(0) != null) {
             for (int i = 0; i <= sibling.count; i++) {
                 child.childs.set(i + orden / 2, sibling.childs.get(i));
             }
         }
-
         for (int i = idx + 1; i < node.count; i++) {
             node.keys.set(i - 1, node.keys.get(i));
         }
-
         for (int i = idx + 2; i <= node.count; i++) {
             node.childs.set(i - 1, node.childs.get(i));
         }
-
         child.count += sibling.count + 1;
         node.count--;
     }
 
-    public static Btree<Integer> building_BTree(String fileName) throws IOException, Exception {
+    public static Btree<Integer> building_btree(String fileName) throws IOException, Exception, ItemNoFound {
         BufferedReader reader = new BufferedReader(new FileReader(fileName));
         String line;
 
@@ -400,26 +376,28 @@ public class Btree<E extends Comparable<E>> {
             }
         }
         reader.close();
-
         for (BNode<Integer> node : nodes.values()) {
             int level = levels.get(node.getIdNode());
             if (level > 0) {
                 BNode<Integer> parentNode = encontrarPadresPorClaves(bTree.root, node.keys.get(0), level - 1);
                 if (parentNode != null) {
+                    boolean childAdded = false;
                     for (int i = 0; i <= parentNode.count; i++) {
                         if (parentNode.childs.get(i) == null) {
                             parentNode.childs.set(i, node);
+                            childAdded = true;
                             break;
                         }
+                    }
+                    if (!childAdded) {
+                        throw new ItemNoFound("No se encontró espacio para agregar el nodo hijo.");
                     }
                 }
             }
         }
-
         if (!bTree.verificarPropiedades()) {
             throw new Exception("El árbol no cumple con las propiedades de un BTree.");
         }
-
         return bTree;
     }
 
@@ -440,23 +418,6 @@ public class Btree<E extends Comparable<E>> {
         return null;
     }
 
-//    private static BNode<Integer> encontrarPadreLevel(Map<Integer, BNode<Integer>> nodes, Map<Integer, Integer> levels, int key, int targetLevel) {
-//        BNode<Integer> parent = null;
-//        for (Map.Entry<Integer, BNode<Integer>> entry : nodes.entrySet()) {
-//            BNode<Integer> node = entry.getValue();
-//            int level = levels.get(node.getIdNode());
-//            if (level == targetLevel) {
-//                if (node.keys.get(0) == null) {
-//                    continue; // Ignorar nodos hoja vacíos
-//                }
-//                if (parent == null || (key >= parent.keys.get(0) && key < node.keys.get(0))) {
-//                    parent = node;
-//                }
-//            }
-//        }
-//        return parent;
-//    }
-
     private boolean verificarPropiedades() {
         return verificarNodos(this.root);
     }
@@ -465,21 +426,17 @@ public class Btree<E extends Comparable<E>> {
         if (node == null) {
             return true;
         }
-
         if (node.count < (orden / 2) && node != this.root) {
             return false;
         }
-
         if (node.count > orden - 1) {
             return false;
         }
-
         for (int i = 1; i < node.count; i++) {
             if (node.keys.get(i - 1).compareTo(node.keys.get(i)) > 0) {
                 return false;
             }
         }
-
         for (int i = 0; i <= node.count; i++) {
             if (node.childs.get(i) != null) {
                 if (!verificarNodos(node.childs.get(i))) {
@@ -487,26 +444,7 @@ public class Btree<E extends Comparable<E>> {
                 }
             }
         }
-
         return true;
-    }
-
-    public void printBTree() {
-        printNode(this.root, 0, 0);
-    }
-
-    private void printNode(BNode<E> node, int level, int parentId) {
-        if (node != null) {
-            System.out.print("Nivel " + level + " ID: " + node.getIdNode() + " Claves: " + node.keys);
-            if (parentId != -1) {
-                System.out.print(" ID Padre: " + parentId);
-            }
-
-            System.out.println();
-            for (BNode<E> child : node.childs) {
-                printNode(child, level + 1, node.getIdNode());
-            }
-        }
     }
 
     public BNode<E> getRoot() {
@@ -532,6 +470,26 @@ public class Btree<E extends Comparable<E>> {
             }
         }
         return maxHeight + 1;
+    }
+
+//    private static BNode<Integer> encontrarPadreLevel(Map<Integer, BNode<Integer>> nodes, Map<Integer, Integer> levels, int key, int targetLevel) {
+//        BNode<Integer> parent = null;
+//        for (Map.Entry<Integer, BNode<Integer>> entry : nodes.entrySet()) {
+//            BNode<Integer> node = entry.getValue();
+//            int level = levels.get(node.getIdNode());
+//            if (level == targetLevel) {
+//                if (node.keys.get(0) == null) {
+//                    continue; // Ignorar nodos hoja vacíos
+//                }
+//                if (parent == null || (key >= parent.keys.get(0) && key < node.keys.get(0))) {
+//                    parent = node;
+//                }
+//            }
+//        }
+//        return parent;
+//    }
+    private void setRoot(BNode<Integer> node) {
+        this.root = (BNode<E>) node;
     }
 
 }

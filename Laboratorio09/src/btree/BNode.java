@@ -12,22 +12,23 @@ public class BNode<E extends Comparable<E>> {
     private int idNode;
     private static int nextId = 1;
     private BNode<E> parent;
-    private int level; 
+    private int level;
 
     public BNode(int n) {
-        this.level = level; 
+        this.level = 0;
         this.n = n;
         this.keys = new ArrayList<>(n - 1);
         this.childs = new ArrayList<>(n);
         this.count = 0;
+        this.idNode = nextId++;
+        this.parent = null;
+
         for (int i = 0; i < n - 1; i++) {
             keys.add(null);
         }
         for (int i = 0; i < n; i++) {
             childs.add(null);
         }
-        this.idNode = nextId++;
-        this.parent = null;
 
     }
 
@@ -35,20 +36,12 @@ public class BNode<E extends Comparable<E>> {
         return childs.get(0) == null;
     }
 
-    public List<BNode<E>> getChilds(int i) {
+    public List<BNode<E>> getChilds() {
         return childs;
     }
 
     public ArrayList<E> getKeys() {
         return keys;
-    }
-
-    public E getKey(int index) {
-        if (index >= 0 && index < keys.size()) {
-            return keys.get(index);
-        } else {
-            return null;
-        }
     }
 
     public void setCount(int count) {
@@ -96,6 +89,10 @@ public class BNode<E extends Comparable<E>> {
         return this.count == 0;
     }
 
+    public void setKeys(ArrayList<E> keys) {
+        this.keys = keys;
+    }
+
     public boolean searchNode(E key, int[] pos) {
         int i = 0;
         while (i < count && key.compareTo(keys.get(i)) > 0) {
@@ -103,10 +100,6 @@ public class BNode<E extends Comparable<E>> {
         }
         pos[0] = i;
         return (i < count && key.compareTo(keys.get(i)) == 0);
-    }
-
-    public void setKeys(ArrayList<E> keys) {
-        this.keys = keys;
     }
 
     @Override
@@ -122,5 +115,23 @@ public class BNode<E extends Comparable<E>> {
         sb.append("]");
         return sb.toString();
     }
+
+    public boolean containsKey(E key) {
+        for (int i = 0; i < count; i++) {
+            if (keys.get(i).equals(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public BNode<E> getChild(int index) {
+        if (index < 0 || index >= childs.size()) {
+            return null; // o manejar el caso fuera de límites según tu lógica
+        }
+        return childs.get(index);
+    }
+
+ 
 
 }
